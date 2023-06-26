@@ -1,18 +1,12 @@
-# Hello world JavaScript action
+# Sync repository documentation to notion wiki
 
-This action prints "Hello World" or "Hello" + the name of a person to greet to the log. To learn how this action was built, see "[Creating a JavaScript action](https://help.github.com/en/articles/creating-a-javascript-action)" in the GitHub Help documentation.
+Supported files:
+- markdown
+- txt (maybe in next releases)
 
 ## Inputs
 
-### `who-to-greet`
-
-**Required** The name of the person to greet. Default `"World"`.
-
 ## Outputs
-
-### `time`
-
-The time we greeted you.
 
 ## Example usage
 
