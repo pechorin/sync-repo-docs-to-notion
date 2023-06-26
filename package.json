@@ -4,6 +4,7 @@
   "description": "This action prints \"Hello World\" or \"Hello\" + the name of a person to greet to the log.",
   "main": "index.js",
   "scripts": {
+    "sync": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,6 +20,9 @@
   "homepage": "https://github.com/actions/hello-world-javascript-action#readme",
   "dependencies": {
     "@actions/core": "^1.6.0",
-    "@actions/github": "^5.0.1"
+    "@actions/github": "^5.0.1",
+    "@notionhq/client": "^2.2.5",
+    "@tryfabric/martian": "^1.2.4",
+    "glob": "^10.3.0"
   }
 }
