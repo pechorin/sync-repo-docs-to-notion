@@ -1,8 +1,6 @@
-# Sync repository documentation to notion wiki
+# Sync repository documentation to Notion
 
-Supported files:
-- markdown
-- txt (maybe in next releases)
+- markdown files sync supported only
 
 ## Inputs
 
