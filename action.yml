@@ -1,16 +1,6 @@
 name: 'sync-repo-docs-to-notion'
 description: 'Sync all you repository md files to notion wiki'
 author: 'pechorin'
-inputs:
-  notion-token:
-    description: 'Notion API token key'
-    required: true
-  notion-root-page-id:
-    description: 'Notion page id where synced pages will be placed'
-    required: true
-  folder:
-    description: 'Folder with md files to sync'
-    required: true
 runs:
   using: 'node16'
   main: 'dist/index.js'
