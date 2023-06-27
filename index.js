@@ -1,19 +1,26 @@
 const fs = require('fs')
 const { globSync } = require('glob')
 const { markdownToBlocks } = require('@tryfabric/martian')
-const { Client } = require('@notionhq/client');
-// const { execSync } = require('child_process');
+const { Client } = require('@notionhq/client')
+const { execSync } = require('child_process')
 
-// TODO: add sleep interval for all requests
-// TODO: fix tables width
+const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_ID']
+const DEBUG = !!process.env.DEBUG
+
 // TODO: NEXT: add content-only update (no pages re-creation)
 
-['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_ID'].forEach((varName) => {
+REQUIRED_ENV_VARS.forEach((varName) => {
   if (!process.env[varName]) {
     console.log(`${varName} not provided`)
     process.exit(1)
   }
 })
+
+// Notion api will responde with errors if no timeout used between requests
+const sleepAfterApiRequest = function () {
+  DEBUG && console.log('sleep ...')
+  execSync('sleep 1')
+}
 
 const notionUrlMatch = process.env.NOTION_ROOT_ID.match(/[^-]*$/)
 if (notionUrlMatch == null) {
@@ -26,12 +33,14 @@ const notion = new Client({
 })
 
 notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
-  // console.log("Root page-> ", rootPage)
+  sleepAfterApiRequest()
 
   const files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
   // console.log("Files to sync ->", files)
 
   notion.blocks.children.list({ block_id: notionPageId }).then((blocksResponse) => {
+    sleepAfterApiRequest()
+
     const blockIdsToRemove = blocksResponse.results.map((e) => e.id)
 
     // sequencially delete all page blocks
@@ -42,6 +51,9 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
         block_id: idToDelete
       }).then(function () {
         console.log('Block deleted:', idToDelete)
+
+        sleepAfterApiRequest()
+
         if (idToDelete !== blockIdsToRemove[blockIdsToRemove.length - 1]) {
           const nextDeleteId = blockIdsToRemove[blockIdsToRemove.indexOf(idToDelete) + 1]
           doDelete(nextDeleteId)
@@ -76,12 +88,16 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
           }
         }
       }).then((pageResponse) => {
-        console.log('Page created', pageResponse)
+        console.log('Page created', title)
+
+        sleepAfterApiRequest()
 
         notion.blocks.children.append({ block_id: pageResponse.id, children: newBlocks }).then(() => {
           // process next page
           if (filePath !== files[files.length - 1]) {
             doCreate(files[files.indexOf(filePath) + 1])
+          } else {
+            console.log('Pages creation complete')
           }
         })
       }).catch((error) => {
