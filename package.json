@@ -20,7 +20,6 @@
   },
   "homepage": "https://github.com/actions/hello-world-javascript-action#readme",
   "dependencies": {
-    "@actions/github": "^5.1.1",
     "@notionhq/client": "^2.2.5",
     "@tryfabric/martian": "^1.2.4",
     "glob": "^10.3.0"
