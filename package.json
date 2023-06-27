@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "sync": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "eslint index.js"
   },
   "repository": {
     "type": "git",
@@ -19,10 +19,15 @@
   },
   "homepage": "https://github.com/actions/hello-world-javascript-action#readme",
   "dependencies": {
-    "@actions/core": "^1.6.0",
-    "@actions/github": "^5.0.1",
     "@notionhq/client": "^2.2.5",
     "@tryfabric/martian": "^1.2.4",
     "glob": "^10.3.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.43.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^16.0.1",
+    "eslint-plugin-promise": "^6.1.1"
   }
 }
