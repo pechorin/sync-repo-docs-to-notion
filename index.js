@@ -4,7 +4,7 @@ const { markdownToBlocks } = require('@tryfabric/martian')
 const { Client } = require('@notionhq/client')
 const { execSync } = require('child_process')
 
-const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_ID']
+const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_PAGE_ID']
 const DEBUG = !!process.env.DEBUG
 const SLEEP_BETWEEN_REQUESTS_INTERVAL = 1
 
@@ -24,7 +24,7 @@ const sleepAfterApiRequest = function (interval) {
   execSync(`sleep ${sleepInterval}`)
 }
 
-const notionUrlMatch = process.env.NOTION_ROOT_ID.match(/[^-]*$/)
+const notionUrlMatch = process.env.NOTION_ROOT_PAGE_ID.match(/[^-]*$/)
 if (notionUrlMatch == null) {
   throw new SyntaxError('Provided page was not in a valid format, url must end with "-<page-id>"')
 }

@@ -1,15 +1,13 @@
-name: 'Sync repo docs to notion'
+name: 'sync-repo-docs-to-notion'
 description: 'Sync all you repository md files to notion wiki'
+author: 'pechorin'
 inputs:
-  who-to-greet:  # id of input
-    description: 'Who to greet'
+  notion-token:
+    description: 'Notion API token key'
     required: true
-    default: 'World'
-outputs:
-  time: # id of output
-    description: 'The time we greeted you'
+  notion-root-page-id:
+    description: 'Notion page id where synced pages will be placed'
+    required: true
 runs:
   using: 'docker'
   image: 'Dockerfile'
-  args:
-    - ${{ inputs.who-to-greet }}

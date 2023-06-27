@@ -1,13 +1,12 @@
 FROM node:current-alpine
 
 ARG FOLDER
-# ARG NOTION_TOKEN
-# ARG NOTION_ROOT_ID
+ARG NOTION_TOKEN
+ARG NOTION_ROOT_PAGE_ID
 
 ENV FOLDER $FOLDER
-
-# Copies your code file from your action repository to the filesystem path `/` of the container
-# COPY entrypoint.sh /entrypoint.sh
+ENV NOTION_TOKEN $NOTION_TOKEN
+ENV NOTION_ROOT_PAGE_ID $NOTION_ROOT_PAGE_ID
 
 RUN npm install
 ENTRYPOINT ["npm run sync"]
