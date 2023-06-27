@@ -6,7 +6,7 @@
   "scripts": {
     "sync": "node index.js",
     "lint": "eslint index.js",
-    "build": "ncc build -m index.js"
+    "build": "ncc build index.js"
   },
   "repository": {
     "type": "git",
