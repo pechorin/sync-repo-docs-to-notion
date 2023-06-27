@@ -9,5 +9,5 @@ inputs:
     description: 'Notion page id where synced pages will be placed'
     required: true
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
+  using: 'node16'
+  main: 'index.js'

@@ -43,6 +43,8 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
   notion.blocks.children.list({ block_id: notionPageId }).then((blocksResponse) => {
     sleepAfterApiRequest()
 
+    // console.log('blocks -> ', JSON.stringify(blocksResponse))
+
     const blockIdsToRemove = blocksResponse.results.map((e) => e.id)
 
     // sequencially delete all page blocks
