@@ -1,3 +1,5 @@
+require('@actions/github')
+
 const fs = require('fs')
 const { globSync } = require('glob')
 const { markdownToBlocks } = require('@tryfabric/martian')
