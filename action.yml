@@ -8,6 +8,9 @@ inputs:
   notion-root-page-id:
     description: 'Notion page id where synced pages will be placed'
     required: true
+  folder:
+    description: 'Folder with md files to sync'
+    required: true
 runs:
   using: 'node16'
   main: 'index.js'
