@@ -6,6 +6,7 @@ const { execSync } = require('child_process')
 
 const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_ID']
 const DEBUG = !!process.env.DEBUG
+const SLEEP_BETWEEN_REQUESTS_INTERVAL = 1
 
 // TODO: NEXT: add content-only update (no pages re-creation)
 
@@ -17,9 +18,10 @@ REQUIRED_ENV_VARS.forEach((varName) => {
 })
 
 // Notion api will responde with errors if no timeout used between requests
-const sleepAfterApiRequest = function () {
-  DEBUG && console.log('sleep ...')
-  execSync('sleep 1')
+const sleepAfterApiRequest = function (interval) {
+  const sleepInterval = interval || SLEEP_BETWEEN_REQUESTS_INTERVAL
+  DEBUG && console.log(`sleep ${sleepInterval} sec.`)
+  execSync(`sleep ${sleepInterval}`)
 }
 
 const notionUrlMatch = process.env.NOTION_ROOT_ID.match(/[^-]*$/)
@@ -36,7 +38,7 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
   sleepAfterApiRequest()
 
   const files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
-  // console.log("Files to sync ->", files)
+  DEBUG && console.log('Files to sync ->', files)
 
   notion.blocks.children.list({ block_id: notionPageId }).then((blocksResponse) => {
     sleepAfterApiRequest()
@@ -57,13 +59,15 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
         if (idToDelete !== blockIdsToRemove[blockIdsToRemove.length - 1]) {
           const nextDeleteId = blockIdsToRemove[blockIdsToRemove.indexOf(idToDelete) + 1]
           doDelete(nextDeleteId)
+        } else {
+          console.log('Block deletion complete')
+          sleepAfterApiRequest(2)
+          doCreate(files[0])
         }
       })
     }
 
-    doDelete(blockIdsToRemove[0])
-    console.log('Block deletion complete')
-
+    // sequencially create new pages
     const doCreate = (filePath) => {
       const mdContent = fs.readFileSync(filePath, 'utf8')
       const newBlocks = markdownToBlocks(mdContent)
@@ -106,7 +110,7 @@ notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
       })
     }
 
-    doCreate(files[0])
+    doDelete(blockIdsToRemove[0])
   })
 }).catch((error) => {
   console.log('Root page not found', error.body)
