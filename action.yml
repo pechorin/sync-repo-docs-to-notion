@@ -12,5 +12,5 @@ inputs:
     description: 'Folder with md files to sync'
     required: true
 runs:
-  using: 'node20'
+  using: 'node16'
   main: 'index.js'
