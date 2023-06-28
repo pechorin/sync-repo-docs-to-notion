@@ -1,6 +1,8 @@
 # Sync repository documentation to Notion
 
 - markdown files sync supported only
+- autofix relative repository urls
+- no images support for now (instead please use mermaid.js embeddable diagrams)
 
 ## Inputs
 
@@ -22,9 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: sync repo docs to notions
-        uses: pechorin/sync-repo-docs-to-notion@main
+        uses: rrebellion/sync-repo-docs-to-notion@main
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_ROOT_PAGE_ID: https://www.notion.so/MyRootPage-jdskdjs8yd83dheeee
           FOLDER: "${{ github.workspace }}/documentation"
+          RELATIVE_URLS_ROOT: "https://github.com/myTeam/myProject"
+          RELATIVE_URLS_ROOT: "${{ github.server_url }}/${{ github.repository }}"
+          DEBUG: 1
 ```

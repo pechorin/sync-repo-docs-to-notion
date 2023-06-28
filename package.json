@@ -1,7 +1,7 @@
 {
-  "name": "hello-world-javascript-action",
+  "name": "sync-repo-docs-to-notion",
   "version": "1.0.0",
-  "description": "This action prints \"Hello World\" or \"Hello\" + the name of a person to greet to the log.",
+  "description": "Sync all repository md files to notion wiki",
   "main": "index.js",
   "scripts": {
     "sync": "node index.js",

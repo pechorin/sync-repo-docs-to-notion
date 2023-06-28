@@ -1,6 +1,6 @@
 name: 'sync-repo-docs-to-notion'
-description: 'Sync all you repository md files to notion wiki'
-author: 'pechorin'
+description: 'Sync all repository md files to notion wiki'
+author: 'rockethumans'
 runs:
   using: 'node16'
   main: 'dist/index.js'
