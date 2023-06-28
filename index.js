@@ -6,6 +6,7 @@ const { execSync } = require('child_process')
 
 const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_PAGE_ID', 'RELATIVE_URLS_ROOT']
 const DEBUG = !!process.env.DEBUG
+const IGNORE_CREATE_ERRORS = process.env.IGNORE_CREATE_ERRORS !== undefined ? !!process.env.IGNORE_CREATE_ERRORS : true
 const SLEEP_BETWEEN_REQUESTS_INTERVAL = 1
 
 // TODO: NEXT: add content-only update (no pages re-creation)
@@ -96,6 +97,7 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
     let newBlocks = markdownToBlocks(mdContent)
 
     let title = file.split(process.env.FOLDER).splice(-1)[0]
+    title = title.replace(/^\//, '')
     title = title.replace('.md', '')
     // console.log(JSON.stringify(newBlocks))
 
@@ -133,14 +135,31 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
 
       sleepAfterApiRequest()
 
-      notion.blocks.children.append({ block_id: pageResponse.id, children: newBlocks }).then(() => {
-        // process next page
-        if (file !== files[files.length - 1]) {
-          createOne(files[files.indexOf(file) + 1], files, resolve, reject)
-        } else {
-          resolve()
-        }
-      })
+      try {
+        notion.blocks.children.append({ block_id: pageResponse.id, children: newBlocks }).then(() => {
+          // process next page
+          if (file !== files[files.length - 1]) {
+            createOne(files[files.indexOf(file) + 1], files, resolve, reject)
+          } else {
+            resolve()
+          }
+        }).catch((error) => {
+          if (IGNORE_CREATE_ERRORS) {
+            console.log('Page creation failed, but error ignored ', error)
+
+            sleepAfterApiRequest()
+
+            if (file !== files[files.length - 1]) {
+              createOne(files[files.indexOf(file) + 1], files, resolve, reject)
+            } else {
+              resolve()
+            }
+          } else {
+            reject(error)
+          }
+        })
+      } catch (error) {
+      }
     }).catch((error) => {
       reject(error)
     })
@@ -154,13 +173,15 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
 }
 
 const run = function () {
+  DEBUG && console.log('Running inside folder: ', process.env.FOLDER)
+
   notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
     sleepAfterApiRequest()
 
     let files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
 
     // pop readme to top
-    const readmePath = `${process.env.FOLDER}README.md`
+    const readmePath = `${process.env.FOLDER}/README.md`
     if (files.includes(readmePath)) {
       files = files.filter((path) => path !== readmePath)
       files = [readmePath, ...files]

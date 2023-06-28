@@ -28,8 +28,8 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_ROOT_PAGE_ID: https://www.notion.so/MyRootPage-jdskdjs8yd83dheeee
-          FOLDER: "${{ github.workspace }}/documentation"
-          RELATIVE_URLS_ROOT: "https://github.com/myTeam/myProject"
+          FOLDER: "${{ github.workspace }}"
           RELATIVE_URLS_ROOT: "${{ github.server_url }}/${{ github.repository }}"
+          IGNORE_CREATE_ERRORS: 1
           DEBUG: 1
 ```
