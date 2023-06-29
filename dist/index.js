@@ -25409,12 +25409,14 @@ const SLEEP_BETWEEN_REQUESTS_INTERVAL = 1
 // TODO: NEXT: add content-only update (no pages re-creation)
 // TODO: NEXT: add folders list support
 
-REQUIRED_ENV_VARS.forEach((varName) => {
-  if (!process.env[varName]) {
-    console.log(`${varName} not provided`)
-    process.exit(1)
-  }
-})
+const validateRequiredEnvVariables = () => {
+  REQUIRED_ENV_VARS.forEach((varName) => {
+    if (!process.env[varName]) {
+      console.log(`${varName} not provided`)
+      process.exit(1)
+    }
+  })
+}
 
 // Notion api will responde with errors if no timeout used between requests
 const sleepAfterApiRequest = function (interval) {
@@ -25423,11 +25425,13 @@ const sleepAfterApiRequest = function (interval) {
   execSync(`sleep ${sleepInterval}`)
 }
 
-const notionUrlMatch = process.env.NOTION_ROOT_PAGE_ID.match(/[^-]*$/)
-if (notionUrlMatch == null) {
-  throw new SyntaxError('Provided page was not in a valid format, url must end with "-<page-id>"')
+const getNotionRootPageId = () => {
+  const notionUrlMatch = process.env.NOTION_ROOT_PAGE_ID.match(/[^-]*$/)
+  if (notionUrlMatch == null) {
+    throw new SyntaxError('Provided page was not in a valid format, url must end with "-<page-id>"')
+  }
+  return notionUrlMatch[0]
 }
-const notionPageId = notionUrlMatch[0]
 
 const notion = new Client({
   auth: process.env.NOTION_TOKEN
@@ -25572,7 +25576,7 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
 const run = function () {
   DEBUG && console.log('Running inside folder: ', process.env.FOLDER)
 
-  notion.pages.retrieve({ page_id: notionPageId }).then((rootPage) => {
+  notion.pages.retrieve({ page_id: getNotionRootPageId() }).then((rootPage) => {
     sleepAfterApiRequest()
 
     let files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
@@ -25586,7 +25590,7 @@ const run = function () {
 
     DEBUG && console.log('Files to sync ->', files)
 
-    notion.blocks.children.list({ block_id: notionPageId }).then((blocksResponse) => {
+    notion.blocks.children.list({ block_id: getNotionRootPageId() }).then((blocksResponse) => {
       sleepAfterApiRequest()
 
       const blockIdsToRemove = blocksResponse.results.map((e) => e.id)
@@ -25609,6 +25613,7 @@ const run = function () {
   })
 }
 
+validateRequiredEnvVariables()
 run()
 
 })();
