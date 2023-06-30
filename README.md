@@ -2,7 +2,9 @@
 
 - markdown files sync supported only
 - autofix relative repository urls
+- syncs only updated documents
 - no images support for now (instead please use mermaid.js embeddable diagrams)
+- appends md5:hash to each document (to check for changes)
 
 ## Inputs
 
@@ -32,4 +34,10 @@ jobs:
           RELATIVE_URLS_ROOT: "${{ github.server_url }}/${{ github.repository }}"
           IGNORE_CREATE_ERRORS: 1
           DEBUG: 1
+```
+
+or with manual launch:
+
+```yaml
+on: workflow_dispatch
 ```

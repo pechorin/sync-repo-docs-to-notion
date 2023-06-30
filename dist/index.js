@@ -18601,11 +18601,11 @@ module.exports = eval("require")("encoding");
 
 /***/ }),
 
-/***/ 2081:
+/***/ 6113:
 /***/ ((module) => {
 
 "use strict";
-module.exports = require("child_process");
+module.exports = require("crypto");
 
 /***/ }),
 
@@ -18654,6 +18654,14 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("path");
+
+/***/ }),
+
+/***/ 7282:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("process");
 
 /***/ }),
 
@@ -25396,17 +25404,26 @@ var __webpack_exports__ = {};
 // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
 (() => {
 const fs = __nccwpck_require__(7147)
+const crypto = __nccwpck_require__(6113)
+
 const { globSync } = __nccwpck_require__(5261)
 const { markdownToBlocks } = __nccwpck_require__(2062)
 const { Client } = __nccwpck_require__(4232)
-const { execSync } = __nccwpck_require__(2081)
+const { title } = __nccwpck_require__(7282)
 
 const REQUIRED_ENV_VARS = ['FOLDER', 'NOTION_TOKEN', 'NOTION_ROOT_PAGE_ID', 'RELATIVE_URLS_ROOT']
 const DEBUG = !!process.env.DEBUG
 const IGNORE_CREATE_ERRORS = process.env.IGNORE_CREATE_ERRORS !== undefined ? !!process.env.IGNORE_CREATE_ERRORS : true
-const SLEEP_BETWEEN_REQUESTS_INTERVAL = 1
 
-// TODO: NEXT: add content-only update (no pages re-creation)
+const DOCUMENT_HASH_TAG_REGEXP = /^md5:/
+
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN
+})
+
+// FIX: fixing relative url ->  mailto:Protobuf@2.6
+// TODO: insert error on insert
+// TODO: fix relative paths
 // TODO: NEXT: add folders list support
 
 const validateRequiredEnvVariables = () => {
@@ -25418,13 +25435,6 @@ const validateRequiredEnvVariables = () => {
   })
 }
 
-// Notion api will responde with errors if no timeout used between requests
-const sleepAfterApiRequest = function (interval) {
-  const sleepInterval = interval || SLEEP_BETWEEN_REQUESTS_INTERVAL
-  DEBUG && console.log(`sleep ${sleepInterval} sec.`)
-  execSync(`sleep ${sleepInterval}`)
-}
-
 const getNotionRootPageId = () => {
   const notionUrlMatch = process.env.NOTION_ROOT_PAGE_ID.match(/[^-]*$/)
   if (notionUrlMatch == null) {
@@ -25433,16 +25443,21 @@ const getNotionRootPageId = () => {
   return notionUrlMatch[0]
 }
 
-const notion = new Client({
-  auth: process.env.NOTION_TOKEN
-})
+const getFilesToProcess = () => {
+  let files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
+
+  // pop readme to top
+  const readmePath = `${process.env.FOLDER}/README.md`
+  if (files.includes(readmePath)) {
+    files = files.filter((path) => path !== readmePath)
+    files = [readmePath, ...files]
+  }
+
+  return files
+}
 
 const deleteBlocksSequentially = function (idToDelete, allIdsToDelete) {
-  if (!idToDelete) {
-    return new Promise((resolve, _reject) => {
-      resolve()
-    })
-  }
+  if (!idToDelete) return new Promise((resolve, _reject) => resolve())
 
   const deleteOne = (id, ids, resolve, reject) => {
     notion.blocks.delete({
@@ -25450,14 +25465,11 @@ const deleteBlocksSequentially = function (idToDelete, allIdsToDelete) {
     }).then(function () {
       console.log('Block deleted:', id)
 
-      sleepAfterApiRequest()
-
       if (id !== ids[ids.length - 1]) {
         const nextDeleteId = ids[ids.indexOf(id) + 1]
         deleteOne(nextDeleteId, ids, resolve, reject)
       } else {
         console.log('Block deletion complete')
-        sleepAfterApiRequest(2)
 
         resolve()
       }
@@ -25473,7 +25485,7 @@ const deleteBlocksSequentially = function (idToDelete, allIdsToDelete) {
   return resultPromise
 }
 
-const deepReplaceValue = function(target, lookupKey, newValueFn) {
+const deepReplaceValue = (target, lookupKey, newValueFn) => {
   if (Array.isArray(target)) {
     target.forEach((obj) => {
       deepReplaceValue(obj, lookupKey, newValueFn)
@@ -25492,34 +25504,53 @@ const deepReplaceValue = function(target, lookupKey, newValueFn) {
   return target
 }
 
-const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPage) {
+const titleFromFilePath = (filePath) => {
+  let title = filePath.split(process.env.FOLDER).splice(-1)[0]
+  title = title.replace(/^\//, '')
+
+  return title.replace('.md', '')
+}
+
+const titleToFilePath = (filePath) => {
+  return `${process.env.FOLDER}/${filePath}.md`
+}
+
+const fileToNotionBlocks = (filePath) => {
+  const mdContent = fs.readFileSync(filePath, 'utf8')
+  let newBlocks = markdownToBlocks(mdContent)
+
+  const fileHash = crypto.createHash('md5').update(mdContent).digest('hex')
+  const hashBlock = markdownToBlocks(`md5:${fileHash}`)
+  newBlocks.push(hashBlock[0])
+
+  // fix relative urls
+  newBlocks = deepReplaceValue(JSON.parse(JSON.stringify(newBlocks)), 'url', (url) => {
+    if (url.match(/^http/)) {
+      return url
+    } else if (url.match(/^#/)) {
+      DEBUG && console.log('fixing #-url -> ', url)
+      // FIXME: don't know what to do with this problem
+      //        url likes this:
+      //        #1.-сделки-и-договоры-сделки-post
+      return process.env.RELATIVE_URLS_ROOT
+    // } else if (url.match(/\.png$|\.jpg$|\.jpeg$|\.webp/)) {
+    //   DEBUG && console.log('fixing img url -> ', url)
+    //   return `${process.env.RELATIVE_URLS_ROOT}/blob/master/${url}`
+    } else {
+      DEBUG && console.log('fixing relative url -> ', url)
+      return `${process.env.RELATIVE_URLS_ROOT}/tree/master/${url}`
+    }
+  })
+
+  return newBlocks
+}
+
+const createPagesSequentially = (fileToCreate, allFilesToCreate, rootPage) => {
+  if (!fileToCreate) return new Promise((resolve, _reject) => resolve())
+
   const createOne = (file, files, resolve, reject) => {
-    const mdContent = fs.readFileSync(file, 'utf8')
-    let newBlocks = markdownToBlocks(mdContent)
-
-    let title = file.split(process.env.FOLDER).splice(-1)[0]
-    title = title.replace(/^\//, '')
-    title = title.replace('.md', '')
-    // console.log(JSON.stringify(newBlocks))
-
-    // fix relative urls
-    newBlocks = deepReplaceValue(JSON.parse(JSON.stringify(newBlocks)), 'url', (url) => {
-      if (url.match(/^http/)) {
-        return url
-      } else if (url.match(/^#/)) {
-        DEBUG && console.log('fixing #-url -> ', url)
-        // FIXME: don't know what to do with this problem
-        //        url likes this:
-        //        #1.-сделки-и-договоры-сделки-post
-        return process.env.RELATIVE_URLS_ROOT
-      } else if (url.match(/\.png$|\.jpg$|\.jpeg$|\.webp/)) {
-        DEBUG && console.log('fixing img url -> ', url)
-        return `${process.env.RELATIVE_URLS_ROOT}/blob/master/${url}`
-      } else {
-        DEBUG && console.log('fixing relative url -> ', url)
-        return `${process.env.RELATIVE_URLS_ROOT}/tree/master/${url}`
-      }
-    })
+    const newBlocks = fileToNotionBlocks(file)
+    const title = titleFromFilePath(file)
 
     notion.pages.create({
       parent: {
@@ -25534,33 +25565,26 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
     }).then((pageResponse) => {
       console.log('Page created', title)
 
-      sleepAfterApiRequest()
+      notion.blocks.children.append({ block_id: pageResponse.id, children: newBlocks }).then(() => {
+        // process next page
+        if (file !== files[files.length - 1]) {
+          createOne(files[files.indexOf(file) + 1], files, resolve, reject)
+        } else {
+          resolve()
+        }
+      }).catch((error) => {
+        if (IGNORE_CREATE_ERRORS) {
+          console.log('Blocks appending failed, but error ignored ', error)
 
-      try {
-        notion.blocks.children.append({ block_id: pageResponse.id, children: newBlocks }).then(() => {
-          // process next page
           if (file !== files[files.length - 1]) {
             createOne(files[files.indexOf(file) + 1], files, resolve, reject)
           } else {
             resolve()
           }
-        }).catch((error) => {
-          if (IGNORE_CREATE_ERRORS) {
-            console.log('Page creation failed, but error ignored ', error)
-
-            sleepAfterApiRequest()
-
-            if (file !== files[files.length - 1]) {
-              createOne(files[files.indexOf(file) + 1], files, resolve, reject)
-            } else {
-              resolve()
-            }
-          } else {
-            reject(error)
-          }
-        })
-      } catch (error) {
-      }
+        } else {
+          reject(error)
+        }
+      })
     }).catch((error) => {
       reject(error)
     })
@@ -25573,38 +25597,120 @@ const createPagesSequentially = function (fileToCreate, allFilesToCreate, rootPa
   return resultPromise
 }
 
+const updatePagesSequentially = (fileToUpdate, filesToUpdate, blocksWithChildPages) => {
+  if (!fileToUpdate) return new Promise((resolve, _reject) => resolve())
+
+  console.log('update start', fileToUpdate, filesToUpdate, blocksWithChildPages.length)
+
+  const updateOne = (file, files, resolve, reject) => {
+    const finalize = () => {
+      if (files.slice(-1)[0] === file) {
+        resolve()
+      } else {
+        updateOne(files[files.indexOf(file) + 1], files, resolve, reject)
+      }
+    }
+
+    const blockWithChildPage = blocksWithChildPages.filter((r) => {
+      return r.child_page?.title === titleFromFilePath(file)
+    })[0]
+    if (!blockWithChildPage) {
+      console.log('block not found on readme, skip ... (this is error)', file)
+      return finalize()
+    } // or error?
+
+    notion.blocks.children.list({ block_id: blockWithChildPage.id }).then((pageBlocksResponse) => {
+      const updatedNotionBlocks = fileToNotionBlocks(file)
+
+      // change detection
+      let isChanged = false
+      const fileContent = fs.readFileSync(file, 'utf8')
+      const fileMD5 = crypto.createHash('md5').update(fileContent).digest('hex')
+      const md5Block = pageBlocksResponse.results.slice(-1)[0]
+      const md5RichText = md5Block?.paragraph?.rich_text[0]
+
+      if (md5RichText?.text?.content?.match(DOCUMENT_HASH_TAG_REGEXP)) {
+        const md5 = md5RichText.text.content.split(DOCUMENT_HASH_TAG_REGEXP).slice(-1)[0]
+
+        if (md5 !== fileMD5) isChanged = true
+      } else {
+        isChanged = true
+      }
+
+      DEBUG && console.log('is changed ->', file, isChanged)
+
+      const idsToRemove = pageBlocksResponse.results.map((e) => e.id)
+
+      if (isChanged) {
+        deleteBlocksSequentially(idsToRemove[0], idsToRemove).then(() => {
+          // update page with new content
+          notion.blocks.children.append({
+            block_id: blockWithChildPage.id,
+            children: updatedNotionBlocks
+          }).then(() => {
+            finalize()
+          }).catch((error) => {
+            if (IGNORE_CREATE_ERRORS) {
+              console.log('Blocks appending failed, error ignored', error)
+              console.log('Try append error on page')
+
+              const errorBlocks = markdownToBlocks(`Blocks appending failed with error: ${error}`)
+
+              notion.blocks.children.append({
+                block_id: blockWithChildPage.id,
+                children: errorBlocks
+              }).then(() => {
+                finalize()
+              })
+              finalize()
+            } else {
+              reject(error)
+            }
+          })
+        })
+      } else {
+        finalize()
+      }
+    })
+  }
+
+  const resultPromise = new Promise((resolve, reject) => {
+    updateOne(fileToUpdate, filesToUpdate, resolve, reject)
+  })
+
+  return resultPromise
+}
+
 const run = function () {
   DEBUG && console.log('Running inside folder: ', process.env.FOLDER)
 
   notion.pages.retrieve({ page_id: getNotionRootPageId() }).then((rootPage) => {
-    sleepAfterApiRequest()
-
-    let files = globSync(`${process.env.FOLDER}/**/*.md`, { ignore: 'node_modules/**' })
-
-    // pop readme to top
-    const readmePath = `${process.env.FOLDER}/README.md`
-    if (files.includes(readmePath)) {
-      files = files.filter((path) => path !== readmePath)
-      files = [readmePath, ...files]
-    }
-
-    DEBUG && console.log('Files to sync ->', files)
+    // DEBUG && console.log('Files to sync ->', filesToCreate)
+    // const toCreate = filesToCreate.map((e) => titleFromFilePath(e))
 
     notion.blocks.children.list({ block_id: getNotionRootPageId() }).then((blocksResponse) => {
-      sleepAfterApiRequest()
+      const current = blocksResponse.results.map((e) => titleToFilePath(e.child_page.title))
+      // console.log('created titles ->', current)
 
-      const blockIdsToRemove = blocksResponse.results.map((e) => e.id)
+      const toCreate = getFilesToProcess()
+      const updateList = toCreate.filter((e) => current.includes(e))
+      const createList = toCreate.filter((e) => !current.includes(e))
+      const deleteList = current.filter((e) => !toCreate.includes(e))
 
-      deleteBlocksSequentially(blockIdsToRemove[0], blockIdsToRemove, rootPage).then(() => {
-        createPagesSequentially(files[0], files, rootPage).then(() => {
-          console.log('Pages creation complete')
-        }).catch((error) => {
-          console.log('Creation failed', error)
-          process.exit(1)
+      console.log('createList ->', createList)
+      console.log('updateList ->', updateList)
+      console.log('deleteList ->', deleteList)
+
+      updatePagesSequentially(updateList[0], updateList, blocksResponse.results).then(() => {
+        console.log('--- all pages updated')
+
+        createPagesSequentially(createList[0], createList, rootPage).then(() => {
+          console.log('--- new pages created')
+
+          deleteBlocksSequentially(deleteList[0], deleteList).then(() => {
+            console.log('--- sync complete')
+          })
         })
-      }).catch((error) => {
-        console.log('Deletion failed', error)
-        process.exit(1)
       })
     })
   }).catch((error) => {
