@@ -41,3 +41,6 @@ or with manual launch:
 ```yaml
 on: workflow_dispatch
 ```
+
+### Warnings
+- Deletion is slow, if you changed a lot of documents it's easier to cleanup Notion first, and then run the action

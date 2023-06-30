@@ -25421,10 +25421,9 @@ const notion = new Client({
   auth: process.env.NOTION_TOKEN
 })
 
+// TODO: delete page instead of many blocks for updates? (optionable)
 // FIX: fixing relative url ->  mailto:Protobuf@2.6
-// TODO: insert error on insert
-// TODO: fix relative paths
-// TODO: NEXT: add folders list support
+// TODO: NEXT: add folders list support ?
 
 const validateRequiredEnvVariables = () => {
   REQUIRED_ENV_VARS.forEach((varName) => {
@@ -25599,8 +25598,6 @@ const createPagesSequentially = (fileToCreate, allFilesToCreate, rootPage) => {
 
 const updatePagesSequentially = (fileToUpdate, filesToUpdate, blocksWithChildPages) => {
   if (!fileToUpdate) return new Promise((resolve, _reject) => resolve())
-
-  console.log('update start', fileToUpdate, filesToUpdate, blocksWithChildPages.length)
 
   const updateOne = (file, files, resolve, reject) => {
     const finalize = () => {
