@@ -17,8 +17,10 @@ const notion = new Client({
 })
 
 // TODO: delete page instead of many blocks for updates? (optionable)
+// TODO: append github link to footer for each doc?
 // FIX: fixing relative url ->  mailto:Protobuf@2.6
 // TODO: NEXT: add folders list support ?
+// TODO: how to import images?
 
 const validateRequiredEnvVariables = () => {
   REQUIRED_ENV_VARS.forEach((varName) => {
