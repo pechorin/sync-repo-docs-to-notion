@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: sync repo docs to notions
-        uses: rrebellion/sync-repo-docs-to-notion@main
+        uses: pechorin/sync-repo-docs-to-notion@main
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_ROOT_PAGE_ID: https://www.notion.so/MyRootPage-jdskdjs8yd83dheeee
@@ -63,7 +63,7 @@ jobs:
             *.md
       - name: sync repo docs to notions
         if: steps.changed-files-specific.outputs.any_changed == 'true'
-        uses: rrebellion/sync-repo-docs-to-notion@main
+        uses: pechorin/sync-repo-docs-to-notion@main
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_ROOT_PAGE_ID: https://www.notion.so/MyRootPage-jdskdjs8yd83dheeee
